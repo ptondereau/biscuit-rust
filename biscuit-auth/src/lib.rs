@@ -219,7 +219,7 @@
 //! biscuit implementations come with a default symbol table to avoid transmitting
 //! frequent values with every token.
 
-mod crypto;
+pub mod crypto;
 pub mod datalog;
 pub mod error;
 pub mod format;

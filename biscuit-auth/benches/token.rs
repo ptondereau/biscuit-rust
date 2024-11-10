@@ -2,12 +2,14 @@ extern crate biscuit_auth as biscuit;
 
 use std::time::Duration;
 
+use biscuit::error::Signature;
 use biscuit::{
     builder::*, builder_ext::BuilderExt, datalog::SymbolTable, AuthorizerLimits, Biscuit, KeyPair,
     UnverifiedBiscuit,
 };
 use codspeed_bencher_compat::{benchmark_group, benchmark_main, Bencher};
 use rand::rngs::OsRng;
+use rand::Rng;
 
 fn create_block_1(b: &mut Bencher) {
     let mut rng = OsRng;
@@ -602,6 +604,33 @@ fn checks_block_verify_only2(b: &mut Bencher) {
     });
 }
 
+fn bench_sign_original(b: &mut Bencher) {
+    let mut rng = OsRng;
+    let message: Vec<u8> = (0..1024).map(|_| rng.gen::<u8>()).collect();
+    let kp1 = KeyPair::new();
+    let kp2 = KeyPair::new();
+
+    b.iter(|| biscuit_auth::crypto::sign(&kp1, &kp2, &message).unwrap());
+}
+
+fn bench_sign_optimized(b: &mut Bencher) {
+    let mut rng = OsRng;
+    let message: Vec<u8> = (0..1024).map(|_| rng.gen::<u8>()).collect();
+    let kp1 = KeyPair::new();
+    let kp2 = KeyPair::new();
+
+    b.iter(|| {
+        let mut to_sign = Vec::with_capacity(message.len() + std::mem::size_of::<i32>() + 32);
+        to_sign.extend_from_slice(&message);
+        to_sign.extend(
+            &(biscuit_auth::format::schema::public_key::Algorithm::Ed25519 as i32).to_le_bytes(),
+        );
+        to_sign.extend(kp2.public().to_bytes().as_ref());
+
+        biscuit_auth::crypto::sign(&kp1, &kp2, &message)
+    });
+}
+
 benchmark_group!(
     benchmarks,
     create_block_1,
@@ -615,6 +644,8 @@ benchmark_group!(
     check_signature_5,
     checks_block_2,
     checks_block_create_verifier2,
-    checks_block_verify_only2
+    checks_block_verify_only2,
+    bench_sign_original,
+    bench_sign_optimized
 );
 benchmark_main!(benchmarks);
