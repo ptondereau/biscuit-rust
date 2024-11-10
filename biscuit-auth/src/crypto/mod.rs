@@ -238,7 +238,8 @@ pub fn sign(
     message: &[u8],
 ) -> Result<Signature, error::Token> {
     //FIXME: replace with SHA512 hashing
-    let mut to_sign = message.to_vec();
+    let mut to_sign = Vec::with_capacity(message.len() + std::mem::size_of::<i32>() + 32);
+    to_sign.extend_from_slice(message);
     to_sign.extend(&(crate::format::schema::public_key::Algorithm::Ed25519 as i32).to_le_bytes());
     to_sign.extend(&next_key.public().to_bytes());
 
@@ -254,7 +255,15 @@ pub fn sign(
 
 pub fn verify_block_signature(block: &Block, public_key: &PublicKey) -> Result<(), error::Format> {
     //FIXME: replace with SHA512 hashing
-    let mut to_verify = block.data.to_vec();
+    let sig_size = if block.external_signature.is_some() {
+        64
+    } else {
+        0
+    };
+    let mut to_verify =
+        Vec::with_capacity(block.data.len() + sig_size + std::mem::size_of::<i32>() + 32);
+
+    to_verify.extend_from_slice(&block.data);
 
     if let Some(signature) = block.external_signature.as_ref() {
         to_verify.extend_from_slice(&signature.signature.to_bytes());
@@ -270,7 +279,8 @@ pub fn verify_block_signature(block: &Block, public_key: &PublicKey) -> Result<(
         .map_err(error::Format::Signature)?;
 
     if let Some(external_signature) = block.external_signature.as_ref() {
-        let mut to_verify = block.data.to_vec();
+        to_verify.clear();
+        to_verify.extend_from_slice(&block.data);
         to_verify
             .extend(&(crate::format::schema::public_key::Algorithm::Ed25519 as i32).to_le_bytes());
         to_verify.extend(&public_key.to_bytes());
