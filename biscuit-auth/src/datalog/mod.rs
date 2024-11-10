@@ -112,13 +112,15 @@ impl Rule {
     fn variables_set(&self) -> HashSet<u32> {
         self.body
             .iter()
-            .flat_map(|pred| {
-                pred.terms.iter().filter_map(|id| match id {
-                    Term::Variable(i) => Some(*i),
-                    _ => None,
-                })
+            .flat_map(|pred| pred.terms.iter())
+            .filter_map(|term| {
+                if let Term::Variable(i) = term {
+                    Some(*i)
+                } else {
+                    None
+                }
             })
-            .collect::<HashSet<_>>()
+            .collect()
     }
 
     pub fn apply<'a, IT>(
@@ -165,14 +167,13 @@ impl Rule {
                             _ => continue,
                         };
                     }
-        
+
                     origin.insert(rule_origin);
                     Some(Ok((origin, Fact { predicate: p })))
                 } else {None}
                 },
                 Err(e) => Some(Err(e))
             }
-          
         })
     }
 
@@ -190,7 +191,7 @@ impl Rule {
         match next {
             None => Ok(false),
             Some(Ok(_)) => Ok(true),
-            Some(Err(e)) => Err(Execution::Expression(e))
+            Some(Err(e)) => Err(Execution::Expression(e)),
         }
     }
 
@@ -214,8 +215,10 @@ impl Rule {
                     Ok(Term::Bool(false)) => {
                         //println!("expr returned {:?}", res);
                         return Ok(false);
-                    },
-                    Ok(_) => return Err(error::Execution::Expression(error::Expression::InvalidType)),
+                    }
+                    Ok(_) => {
+                        return Err(error::Execution::Expression(error::Expression::InvalidType))
+                    }
                     Err(e) => {
                         return Err(error::Execution::Expression(e));
                     }
@@ -235,33 +238,33 @@ impl Rule {
         origin_symbols: &SymbolTable,
         target_symbols: &mut SymbolTable,
     ) -> Result<Self, error::Format> {
+        let mut body = Vec::with_capacity(self.body.len());
+        let mut expressions = Vec::with_capacity(self.expressions.len());
+        let mut scopes = Vec::with_capacity(self.scopes.len());
+
+        for pred in &self.body {
+            body.push(
+                builder::Predicate::convert_from(pred, origin_symbols)?.convert(target_symbols),
+            );
+        }
+
+        for expr in &self.expressions {
+            expressions.push(
+                builder::Expression::convert_from(expr, origin_symbols)?.convert(target_symbols),
+            );
+        }
+
+        for scope in &self.scopes {
+            scopes
+                .push(builder::Scope::convert_from(scope, origin_symbols)?.convert(target_symbols));
+        }
+
         Ok(Rule {
             head: builder::Predicate::convert_from(&self.head, origin_symbols)?
                 .convert(target_symbols),
-            body: self
-                .body
-                .iter()
-                .map(|p| {
-                    builder::Predicate::convert_from(p, origin_symbols)
-                        .map(|p| p.convert(target_symbols))
-                })
-                .collect::<Result<Vec<_>, _>>()?,
-            expressions: self
-                .expressions
-                .iter()
-                .map(|c| {
-                    builder::Expression::convert_from(c, origin_symbols)
-                        .map(|e| e.convert(target_symbols))
-                })
-                .collect::<Result<Vec<_>, _>>()?,
-            scopes: self
-                .scopes
-                .iter()
-                .map(|s| {
-                    builder::Scope::convert_from(s, origin_symbols)
-                        .map(|s| s.convert(target_symbols))
-                })
-                .collect::<Result<Vec<_>, _>>()?,
+            body,
+            expressions,
+            scopes,
         })
     }
 
@@ -543,6 +546,10 @@ pub fn var(syms: &mut SymbolTable, name: &str) -> Term {
 }
 
 pub fn match_preds(rule_pred: &Predicate, fact_pred: &Predicate) -> bool {
+    if rule_pred.name != fact_pred.name || rule_pred.terms.len() != fact_pred.terms.len() {
+        return false;
+    }
+
     rule_pred.name == fact_pred.name
         && rule_pred.terms.len() == fact_pred.terms.len()
         && rule_pred
@@ -604,11 +611,10 @@ impl World {
                 for (origin, rule) in rules {
                     for res in rule.apply(it.clone(), *origin, symbols) {
                         match res {
-                            Ok((origin,fact)) => {
+                            Ok((origin, fact)) => {
                                 new_facts.insert(&origin, fact);
-
-                            },
-                            Err(e)  => {
+                            }
+                            Err(e) => {
                                 return Err(Execution::Expression(e));
                             }
                         }
@@ -625,7 +631,9 @@ impl World {
 
             index += 1;
             if index == limits.max_iterations {
-                break Err(Execution::RunLimit( crate::error::RunLimit::TooManyIterations));
+                break Err(Execution::RunLimit(
+                    crate::error::RunLimit::TooManyIterations,
+                ));
             }
 
             if self.facts.len() >= limits.max_facts as usize {
@@ -678,11 +686,10 @@ impl World {
         //new_facts.extend(rule.apply(it, origin, symbols));
         for res in rule.apply(it.clone(), origin, symbols) {
             match res {
-                Ok((origin,fact)) => {
+                Ok((origin, fact)) => {
                     new_facts.insert(&origin, fact);
-
-                },
-                Err(e)  => {
+                }
+                Err(e) => {
                     return Err(Execution::Expression(e));
                 }
             }
@@ -984,25 +991,31 @@ mod tests {
         println!("adding r2: {}", syms.print_rule(&r2));
         w.add_rule(0, &[0].iter().collect(), r2);
 
-        w.run_with_limits(&syms, RunLimits {
-             max_time: Duration::from_secs(10),
-            ..Default::default()
-        }).unwrap();
+        w.run_with_limits(
+            &syms,
+            RunLimits {
+                max_time: Duration::from_secs(10),
+                ..Default::default()
+            },
+        )
+        .unwrap();
 
         println!("parents:");
-        let res = w.query_rule(
-            rule::<Term, Predicate>(
-                parent,
-                &[var(&mut syms, "parent"), var(&mut syms, "child")],
-                &[pred(
+        let res = w
+            .query_rule(
+                rule::<Term, Predicate>(
                     parent,
                     &[var(&mut syms, "parent"), var(&mut syms, "child")],
-                )],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+                    &[pred(
+                        parent,
+                        &[var(&mut syms, "parent"), var(&mut syms, "child")],
+                    )],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (origin, fact) in res.iterator(&[0].iter().collect()) {
             println!("\t{:?}\t{}", origin, syms.print_fact(fact));
@@ -1039,19 +1052,21 @@ mod tests {
         );
         w.add_fact(&[0].iter().collect(), fact(parent, &[&c, &e]));
         w.run(&syms).unwrap();
-        let res = w.query_rule(
-            rule::<Term, Predicate>(
-                grandparent,
-                &[var(&mut syms, "grandparent"), var(&mut syms, "grandchild")],
-                &[pred(
+        let res = w
+            .query_rule(
+                rule::<Term, Predicate>(
                     grandparent,
                     &[var(&mut syms, "grandparent"), var(&mut syms, "grandchild")],
-                )],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+                    &[pred(
+                        grandparent,
+                        &[var(&mut syms, "grandparent"), var(&mut syms, "grandchild")],
+                    )],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
         println!("grandparents after inserting parent(C, E): {:?}", res);
 
         let res = res
@@ -1105,26 +1120,28 @@ mod tests {
         w.add_fact(&[0].iter().collect(), fact(t2, &[&int(1), &bbb, &int(0)]));
         w.add_fact(&[0].iter().collect(), fact(t2, &[&int(2), &ccc, &int(1)]));
 
-        let res = w.query_rule(
-            rule(
-                join,
-                &[var(&mut syms, "left"), var(&mut syms, "right")],
-                &[
-                    pred(t1, &[var(&mut syms, "id"), var(&mut syms, "left")]),
-                    pred(
-                        t2,
-                        &[
-                            var(&mut syms, "t2_id"),
-                            var(&mut syms, "right"),
-                            var(&mut syms, "id"),
-                        ],
-                    ),
-                ],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+        let res = w
+            .query_rule(
+                rule(
+                    join,
+                    &[var(&mut syms, "left"), var(&mut syms, "right")],
+                    &[
+                        pred(t1, &[var(&mut syms, "id"), var(&mut syms, "left")]),
+                        pred(
+                            t2,
+                            &[
+                                var(&mut syms, "t2_id"),
+                                var(&mut syms, "right"),
+                                var(&mut syms, "id"),
+                            ],
+                        ),
+                    ],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (_, fact) in res.iter_all() {
             println!("\t{}", syms.print_fact(fact));
@@ -1145,33 +1162,35 @@ mod tests {
         assert_eq!(res2, compared);
 
         // test constraints
-        let res = w.query_rule(
-            expressed_rule(
-                join,
-                &[var(&mut syms, "left"), var(&mut syms, "right")],
-                &[
-                    pred(t1, &[var(&mut syms, "id"), var(&mut syms, "left")]),
-                    pred(
-                        t2,
-                        &[
-                            var(&mut syms, "t2_id"),
-                            var(&mut syms, "right"),
-                            var(&mut syms, "id"),
-                        ],
-                    ),
-                ],
-                &[Expression {
-                    ops: vec![
-                        Op::Value(var(&mut syms, "id")),
-                        Op::Value(Term::Integer(1)),
-                        Op::Binary(Binary::LessThan),
+        let res = w
+            .query_rule(
+                expressed_rule(
+                    join,
+                    &[var(&mut syms, "left"), var(&mut syms, "right")],
+                    &[
+                        pred(t1, &[var(&mut syms, "id"), var(&mut syms, "left")]),
+                        pred(
+                            t2,
+                            &[
+                                var(&mut syms, "t2_id"),
+                                var(&mut syms, "right"),
+                                var(&mut syms, "id"),
+                            ],
+                        ),
                     ],
-                }],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+                    &[Expression {
+                        ops: vec![
+                            Op::Value(var(&mut syms, "id")),
+                            Op::Value(Term::Integer(1)),
+                            Op::Binary(Binary::LessThan),
+                        ],
+                    }],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (_, fact) in res.iter_all() {
             println!("\t{}", syms.print_fact(fact));
@@ -1256,7 +1275,8 @@ mod tests {
                 0,
                 &[0].iter().collect(),
                 syms,
-            ).unwrap()
+            )
+            .unwrap()
             .iter_all()
             .map(|(_, fact)| fact.clone())
             .collect()
@@ -1407,35 +1427,37 @@ mod tests {
         w.add_fact(&[0].iter().collect(), fact(x, &[&abc, &int(0), &test]));
         w.add_fact(&[0].iter().collect(), fact(x, &[&def, &int(2), &hello]));
 
-        let res = w.query_rule(
-            expressed_rule(
-                int_set,
-                &[var(&mut syms, "sym"), var(&mut syms, "str")],
-                &[pred(
-                    x,
-                    &[
-                        var(&mut syms, "sym"),
-                        var(&mut syms, "int"),
-                        var(&mut syms, "str"),
-                    ],
-                )],
-                &[Expression {
-                    ops: vec![
-                        Op::Value(Term::Set(
-                            [Term::Integer(0), Term::Integer(1)]
-                                .iter()
-                                .cloned()
-                                .collect(),
-                        )),
-                        Op::Value(var(&mut syms, "int")),
-                        Op::Binary(Binary::Contains),
-                    ],
-                }],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+        let res = w
+            .query_rule(
+                expressed_rule(
+                    int_set,
+                    &[var(&mut syms, "sym"), var(&mut syms, "str")],
+                    &[pred(
+                        x,
+                        &[
+                            var(&mut syms, "sym"),
+                            var(&mut syms, "int"),
+                            var(&mut syms, "str"),
+                        ],
+                    )],
+                    &[Expression {
+                        ops: vec![
+                            Op::Value(Term::Set(
+                                [Term::Integer(0), Term::Integer(1)]
+                                    .iter()
+                                    .cloned()
+                                    .collect(),
+                            )),
+                            Op::Value(var(&mut syms, "int")),
+                            Op::Binary(Binary::Contains),
+                        ],
+                    }],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (_, fact) in res.iter_all() {
             println!("\t{}", syms.print_fact(fact));
@@ -1454,37 +1476,39 @@ mod tests {
         let abc_sym_id = syms.add("abc");
         let ghi_sym_id = syms.add("ghi");
 
-        let res = w.query_rule(
-            expressed_rule(
-                symbol_set,
-                &[
-                    var(&mut syms, "symbol"),
-                    var(&mut syms, "int"),
-                    var(&mut syms, "str"),
-                ],
-                &[pred(
-                    x,
+        let res = w
+            .query_rule(
+                expressed_rule(
+                    symbol_set,
                     &[
                         var(&mut syms, "symbol"),
                         var(&mut syms, "int"),
                         var(&mut syms, "str"),
                     ],
-                )],
-                &[Expression {
-                    ops: vec![
-                        Op::Value(Term::Set(
-                            [abc_sym_id, ghi_sym_id].iter().cloned().collect(),
-                        )),
-                        Op::Value(var(&mut syms, "symbol")),
-                        Op::Binary(Binary::Contains),
-                        Op::Unary(Unary::Negate),
-                    ],
-                }],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+                    &[pred(
+                        x,
+                        &[
+                            var(&mut syms, "symbol"),
+                            var(&mut syms, "int"),
+                            var(&mut syms, "str"),
+                        ],
+                    )],
+                    &[Expression {
+                        ops: vec![
+                            Op::Value(Term::Set(
+                                [abc_sym_id, ghi_sym_id].iter().cloned().collect(),
+                            )),
+                            Op::Value(var(&mut syms, "symbol")),
+                            Op::Binary(Binary::Contains),
+                            Op::Unary(Unary::Negate),
+                        ],
+                    }],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (_, fact) in res.iter_all() {
             println!("\t{}", syms.print_fact(fact));
@@ -1500,34 +1524,36 @@ mod tests {
             .collect::<HashSet<_>>();
         assert_eq!(res2, compared);
 
-        let res = w.query_rule(
-            expressed_rule(
-                string_set,
-                &[
-                    var(&mut syms, "sym"),
-                    var(&mut syms, "int"),
-                    var(&mut syms, "str"),
-                ],
-                &[pred(
-                    x,
+        let res = w
+            .query_rule(
+                expressed_rule(
+                    string_set,
                     &[
                         var(&mut syms, "sym"),
                         var(&mut syms, "int"),
                         var(&mut syms, "str"),
                     ],
-                )],
-                &[Expression {
-                    ops: vec![
-                        Op::Value(Term::Set([test.clone(), aaa].iter().cloned().collect())),
-                        Op::Value(var(&mut syms, "str")),
-                        Op::Binary(Binary::Contains),
-                    ],
-                }],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+                    &[pred(
+                        x,
+                        &[
+                            var(&mut syms, "sym"),
+                            var(&mut syms, "int"),
+                            var(&mut syms, "str"),
+                        ],
+                    )],
+                    &[Expression {
+                        ops: vec![
+                            Op::Value(Term::Set([test.clone(), aaa].iter().cloned().collect())),
+                            Op::Value(var(&mut syms, "str")),
+                            Op::Binary(Binary::Contains),
+                        ],
+                    }],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (_, fact) in res.iter_all() {
             println!("\t{}", syms.print_fact(fact));
@@ -1565,12 +1591,14 @@ mod tests {
         w.add_fact(&[0].iter().collect(), fact(right, &[&file2, &read]));
         w.add_fact(&[0].iter().collect(), fact(right, &[&file1, &write]));
 
-        let res = w.query_rule(
-            rule(check1, &[&file1], &[pred(resource, &[&file1])]),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+        let res = w
+            .query_rule(
+                rule(check1, &[&file1], &[pred(resource, &[&file1])]),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (_, fact) in res.iter_all() {
             println!("\t{}", syms.print_fact(fact));
@@ -1578,20 +1606,22 @@ mod tests {
 
         assert!(res.is_empty());
 
-        let res = w.query_rule(
-            rule(
-                check2,
-                &[Term::Variable(0)],
-                &[
-                    pred(resource, &[&Term::Variable(0)]),
-                    pred(operation, &[&read]),
-                    pred(right, &[&Term::Variable(0), &read]),
-                ],
-            ),
-            0,
-            &[0].iter().collect(),
-            &syms,
-        ).unwrap();
+        let res = w
+            .query_rule(
+                rule(
+                    check2,
+                    &[Term::Variable(0)],
+                    &[
+                        pred(resource, &[&Term::Variable(0)]),
+                        pred(operation, &[&read]),
+                        pred(right, &[&Term::Variable(0), &read]),
+                    ],
+                ),
+                0,
+                &[0].iter().collect(),
+                &syms,
+            )
+            .unwrap();
 
         for (_, fact) in res.iter_all() {
             println!("\t{}", syms.print_fact(fact));
