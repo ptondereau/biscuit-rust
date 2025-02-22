@@ -9,17 +9,17 @@ documentation = "https://docs.rs/biscuit-auth"
 homepage = "https://github.com/biscuit-auth/biscuit"
 repository = "https://github.com/biscuit-auth/biscuit-rust"
 
+[features]
+capi = []
+
 [dependencies]
 biscuit-auth = { version = "6.0.0-beta.2", path = "../biscuit-auth", features = [
     "datalog-macro",
     "serde-error",
     "pem",
 ] }
-libc = { version = "0.2", optional = true }
+libc = "0.2"
 rand = "0.8"
-
-[features]
-capi = ["libc"]
 
 [dev-dependencies]
 inline-c = "0.1"
@@ -31,3 +31,8 @@ name = "biscuit_auth"
 
 [package.metadata.capi.header]
 name = "biscuit_auth"
+
+[[test]]
+name = "capi"
+required-features = ["capi"]
+path = "tests/capi.rs"
