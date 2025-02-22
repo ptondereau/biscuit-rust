@@ -46,11 +46,11 @@ jobs:
         env:
           LINK: https://github.com/lu-zero/cargo-c/releases/download
           CARGO_C_FILE: cargo-c-x86_64-unknown-linux-musl.tar.gz
-          CARGO_C_VERSION: v0.10.5
+          CARGO_C_VERSION: v0.10.10
         run: |
           curl -L $LINK/$CARGO_C_VERSION/$CARGO_C_FILE | tar xz -C ~/.cargo/bin
       - name: Run cargo-c tests
-        run: cargo ctest --features="capi" --release
+        run: cargo ctest --release
 
   coverage:
     name: Coverage
