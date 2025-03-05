@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     convert::TryInto,
-    fmt::Write,
+    fmt::{self, Write},
     time::{Duration, SystemTime},
 };
 
@@ -405,6 +405,18 @@ impl AuthorizerBuilder {
             limits: self.limits,
             execution_time: None,
         })
+    }
+}
+
+impl fmt::Display for AuthorizerBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.authorizer_block_builder.fmt(f)?;
+        for mut policy in self.policies.clone().into_iter() {
+            policy.apply_parameters();
+            writeln!(f, "{policy};")?;
+        }
+
+        Ok(())
     }
 }
 

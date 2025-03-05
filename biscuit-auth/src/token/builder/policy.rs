@@ -105,6 +105,12 @@ impl Policy {
 
         Ok(())
     }
+
+    pub fn apply_parameters(&mut self) {
+        for rule in self.queries.iter_mut() {
+            rule.apply_parameters();
+        }
+    }
 }
 
 impl fmt::Display for Policy {
