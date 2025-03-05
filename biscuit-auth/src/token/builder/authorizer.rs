@@ -39,6 +39,26 @@ impl AuthorizerBuilder {
         AuthorizerBuilder::default()
     }
 
+    /// merge datalog contents (facts, rules, checks) from a `BlockBuilder` into
+    pub fn merge_block(mut self, other: BlockBuilder) -> Self {
+        self.authorizer_block_builder = self.authorizer_block_builder.merge(other);
+        self
+    }
+
+    /// merge datalog contents (facts, rules, checks, policies) from another `AuthorizerBuilder` into `self`, as well as registered extern functions.
+    ///
+    /// If a registered extern function is defined on both sides, the one from `self` is kept.
+    ///
+    /// `AuthorizerLimits` from `self` are kept, those from `other` are discarded
+    pub fn merge(mut self, mut other: AuthorizerBuilder) -> Self {
+        self.policies.append(&mut other.policies);
+        self.extern_funcs.extend(other.extern_funcs);
+        self.authorizer_block_builder = self
+            .authorizer_block_builder
+            .merge(other.authorizer_block_builder);
+        self
+    }
+
     pub fn fact<F: TryInto<Fact>>(mut self, fact: F) -> Result<Self, error::Token>
     where
         error::Token: From<<F as TryInto<Fact>>::Error>,
