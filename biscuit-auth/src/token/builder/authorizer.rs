@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     convert::TryInto,
-    fmt::Write,
+    fmt::{self, Write},
     time::{Duration, SystemTime},
 };
 
@@ -37,6 +37,26 @@ pub struct AuthorizerBuilder {
 impl AuthorizerBuilder {
     pub fn new() -> AuthorizerBuilder {
         AuthorizerBuilder::default()
+    }
+
+    /// merge datalog contents (facts, rules, checks) from a `BlockBuilder` into
+    pub fn merge_block(mut self, other: BlockBuilder) -> Self {
+        self.authorizer_block_builder = self.authorizer_block_builder.merge(other);
+        self
+    }
+
+    /// merge datalog contents (facts, rules, checks, policies) from another `AuthorizerBuilder` into `self`, as well as registered extern functions.
+    ///
+    /// If a registered extern function is defined on both sides, the one from `self` is kept.
+    ///
+    /// `AuthorizerLimits` from `self` are kept, those from `other` are discarded
+    pub fn merge(mut self, mut other: AuthorizerBuilder) -> Self {
+        self.policies.append(&mut other.policies);
+        self.extern_funcs.extend(other.extern_funcs);
+        self.authorizer_block_builder = self
+            .authorizer_block_builder
+            .merge(other.authorizer_block_builder);
+        self
     }
 
     pub fn fact<F: TryInto<Fact>>(mut self, fact: F) -> Result<Self, error::Token>
@@ -237,9 +257,13 @@ impl AuthorizerBuilder {
     /// Sets the runtime limits of the authorizer
     ///
     /// Those limits cover all the executions under the `authorize`, `query` and `query_all` methods
-    pub fn limits(mut self, limits: AuthorizerLimits) -> Self {
+    pub fn set_limits(mut self, limits: AuthorizerLimits) -> Self {
         self.limits = limits;
         self
+    }
+
+    pub fn limits(&self) -> &AuthorizerLimits {
+        &self.limits
     }
 
     /// Replaces the registered external functions
@@ -401,6 +425,18 @@ impl AuthorizerBuilder {
             limits: self.limits,
             execution_time: None,
         })
+    }
+}
+
+impl fmt::Display for AuthorizerBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.authorizer_block_builder.fmt(f)?;
+        for mut policy in self.policies.clone().into_iter() {
+            policy.apply_parameters();
+            writeln!(f, "{policy};")?;
+        }
+
+        Ok(())
     }
 }
 
