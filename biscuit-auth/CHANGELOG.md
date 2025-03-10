@@ -1,3 +1,9 @@
+# `6.0.0-beta.3`
+
+- dedicated prefix for private keys (#276)
+- missing `AuthorizerBuilder` features (#274)
+- `.try_or()` (#271)
+
 # `6.0.0-beta.2`
 
 - support for `pem` / `der` private and public keys (#212 and #265)
