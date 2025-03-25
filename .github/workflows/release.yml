@@ -30,6 +30,9 @@ jobs:
           - os: ubuntu-latest
             target_arch: x86_64-unknown-linux-musl
             arch: x86_64-linux-musl
+          - os: ubuntu-latest
+            target_arch: aarch64-unknown-linux-gnu
+            arch: arm64-linux
 
     steps:
       - name: Checkout sources
@@ -47,16 +50,16 @@ jobs:
         env:
           LINK: https://github.com/lu-zero/cargo-c/releases/download
           CARGO_C_FILE: cargo-c-macos.zip
-          CARGO_C_VERSION: v0.10.5
+          CARGO_C_VERSION: v0.10.11
         run: |
-          curl -L $LINK/$CARGO_C_VERSION/$CARGO_C_FILE -o cargo-c-macos.zip
-          unzip cargo-c-macos.zip -d ~/.cargo/bin
+          curl -L $LINK/$CARGO_C_VERSION/$CARGO_C_FILE -o ${{ env.CARGO_C_FILE }}
+          unzip ${{ env.CARGO_C_FILE }} -d ~/.cargo/bin
       - name: Install cargo-c (Linux)
         if: matrix.os == 'ubuntu-latest'
         env:
           LINK: https://github.com/lu-zero/cargo-c/releases/download
           CARGO_C_FILE: cargo-c-x86_64-unknown-linux-musl.tar.gz
-          CARGO_C_VERSION: v0.10.5
+          CARGO_C_VERSION: v0.10.11
         run: |
           curl -L $LINK/$CARGO_C_VERSION/$CARGO_C_FILE | tar xz -C ~/.cargo/bin
       - name: Run cargo-c tests

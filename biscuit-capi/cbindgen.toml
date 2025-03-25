@@ -5,7 +5,7 @@ language = "C"
 # An optional string of text to output at the beginning of the generated file
 # default: doesn't emit anything
 header = '''/*
- * Copyright 2020 Clever Cloud, 2021 Geoffroy Couprie
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,4 +23,3 @@ header = '''/*
 # An optional name to use as an include guard
 # default: doesn't emit an include guard
 include_guard = "biscuit_bindings_h"
-
