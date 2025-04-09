@@ -483,9 +483,9 @@ fn fold_exprs(initial: Expr, remainder: Vec<(builder::Binary, Expr)>) -> Expr {
 }
 
 /// Top-lever parser for an expression. Expression parsers are layered in
-/// order to support operator precedence (see https://en.wikipedia.org/wiki/Operator-precedence_parser).
+/// order to support operator precedence (see <https://en.wikipedia.org/wiki/Operator-precedence_parser>).
 ///
-/// See https://github.com/biscuit-auth/biscuit/blob/master/SPECIFICATIONS.md#grammar
+/// See <https://github.com/biscuit-auth/biscuit/blob/master/SPECIFICATIONS.md#grammar>
 /// for the precedence order of operators in biscuit datalog.
 ///
 /// The operators with the lowest precedence are parsed at the outer level,
