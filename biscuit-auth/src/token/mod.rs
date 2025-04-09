@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 Geoffroy Couprie <contact@geoffroycouprie.com> and Contributors to the Eclipse Foundation.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 //! main structures to interact with Biscuit tokens
 use std::fmt::Display;
 use std::iter::once;
@@ -681,7 +685,7 @@ pub enum Scope {
 /// Chooses a root public key to verify the token
 ///
 /// In case of key rotation, it is possible to add a root key id
-/// to the token with [`BiscuitBuilder::set_root_key_id`]. This
+/// to the token with [`BiscuitBuilder::root_key_id`]. This
 /// value will be passed to the implementor of `RootKeyProvider`
 /// to choose which key will be used.
 pub trait RootKeyProvider {
