@@ -163,6 +163,8 @@ impl Biscuit {
     }
 
     /// creates an authorizer from this token
+    ///
+    /// Such an authorizer can only be used for querying, since it will contain no authorization policy.
     pub fn authorizer(&self) -> Result<Authorizer, error::Token> {
         Authorizer::from_token(self)
     }
