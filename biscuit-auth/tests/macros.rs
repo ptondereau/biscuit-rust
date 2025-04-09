@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 Geoffroy Couprie <contact@geoffroycouprie.com> and Contributors to the Eclipse Foundation.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 use biscuit_auth::{builder, datalog::RunLimits, KeyPair};
 use biscuit_quote::{
     authorizer, authorizer_merge, biscuit, biscuit_merge, block, block_merge, check, fact, policy,

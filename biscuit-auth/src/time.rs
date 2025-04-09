@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 Geoffroy Couprie <contact@geoffroycouprie.com> and Contributors to the Eclipse Foundation.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 //! std::time::Instant compatibility for WebAssembly
 //!
 //! code from <https://github.com/rust-lang/rust/issues/48564#issuecomment-698712971>

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 Geoffroy Couprie <contact@geoffroycouprie.com> and Contributors to the Eclipse Foundation.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 use super::{
     constrained_rule, date, fact, pred, rule, string, var, Binary, Block, Check, CheckKind,
     Convert, Expression, Fact, Op, Rule, Scope, Term,

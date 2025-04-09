@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 Geoffroy Couprie <contact@geoffroycouprie.com> and Contributors to the Eclipse Foundation.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 //! Authorizer structure and associated functions
 use super::builder::{AuthorizerBuilder, BlockBuilder, Check, Fact, Policy, PolicyKind, Rule};
 use super::{Biscuit, Block};

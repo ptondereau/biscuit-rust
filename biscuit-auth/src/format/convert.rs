@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 Geoffroy Couprie <contact@geoffroycouprie.com> and Contributors to the Eclipse Foundation.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 //! helper functions for conversion between internal structures and Protobuf
 
 use self::v2::proto_scope_to_token_scope;
