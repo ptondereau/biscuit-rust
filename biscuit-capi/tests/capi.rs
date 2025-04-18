@@ -191,6 +191,10 @@ fn serialize_keys() {
 
             string_free((char*) kp_pem);
 
+            if (!public_key_equals(pubkey, pubkey2)) {
+                printf("public keys are not equal\n");
+            }
+
             public_key_free(pubkey);
             public_key_free(pubkey2);
             key_pair_free(kp);

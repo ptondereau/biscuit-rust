@@ -515,6 +515,14 @@ pub unsafe extern "C" fn public_key_from_pem(pem: *const c_char) -> Option<Box<P
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn public_key_equals(a: Option<&PublicKey>, b: Option<&PublicKey>) -> bool {
+    if a.is_none() || b.is_none() {
+        return false;
+    }
+    a.unwrap().0 == b.unwrap().0
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn public_key_free(_kp: Option<Box<PublicKey>>) {}
 
 impl BiscuitBuilder {
