@@ -36,7 +36,3 @@ name = "biscuit_auth"
 name = "capi"
 required-features = ["capi"]
 path = "tests/capi.rs"
-
-[profile.release-strip]
-inherits = "release"
-strip = "symbols"
