@@ -76,8 +76,6 @@ jobs:
           cargo cinstall --target ${{ matrix.target_arch }} \
             --prefix=/usr \
             --destdir=./build \
-            --library-type staticlib \
-            --library-type cdylib \
             --profile release-strip
 
       - name: Compress
